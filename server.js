@@ -118,7 +118,7 @@ app.delete('/deleteProject/:id', async (req, res) => {
         let connection = await mysql.createConnection(dbConfig);
         const [rows] = await connection.execute('SELECT name FROM portfolio WHERE id = ?', [id]);
         const displayName = rows[0].name;
-        await connection.execute('DELETE FROM cards WHERE id = ?', [id]);
+        await connection.execute('DELETE FROM portfolio WHERE id = ?', [id]);
         res.status(200).json({message: displayName + ' has been deleted'});
     } catch (err) {
         console.error(err);
