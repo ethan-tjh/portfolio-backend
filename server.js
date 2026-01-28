@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 require('dotenv').config();
-const port = 5000;
+const port = 3000;
 const dbConfig = {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -15,7 +15,7 @@ const dbConfig = {
 };
 const app = express();
 const allowedOrigins = [
-    "http://localhost:5000",
+    "http://localhost:3000",
 ]
 app.use(cors({
     origin: function (origin, callback) {
