@@ -2,7 +2,8 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 require('dotenv').config();
-const port = 3000;
+const jwt = require("jsonwebtoken");
+const port = process.env.PORT || 3000;
 const dbConfig = {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -14,6 +15,7 @@ const dbConfig = {
     queueLimit: 0,
 };
 const app = express();
+app.use(express.json());
 const allowedOrigins = [
     "http://localhost:3000",
 ]
@@ -27,9 +29,22 @@ app.use(cors({
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: false,
+    credentials: true,
 }));
-app.use(express.json());
+const ADMIN = {id: 1, username: "admin", password: "admin123"};
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
+function requireAuth(req, res, next) {
+    const header = req.headers.authorization;
+    if (!header) return res.status(401).json({ error: "Missing auth" });
+    const [type, token] = header.split(" ");
+    if (type !== "Bearer" || !token) return res.status(401).json({ error: "Invalid auth" });
+    try {
+        req.user = jwt.verify(token, JWT_SECRET);
+        next();
+    } catch {
+        res.status(401).json({ error: "Invalid/expired token" });
+    }
+}
 app.listen(port, () => {
     console.log('Server running on port', port);
 });
@@ -45,6 +60,13 @@ app.get('/projects', async (req, res) => {
     }
 });
 // POST
+app.post('/login', (req, res) => {
+    const {username, password} = req.body;
+    if (username !== ADMIN.username || password !== ADMIN.password)
+        return res.status(401).json({error: "Invalid credentials"});
+    const token = jwt.sign({userId: ADMIN.id}, JWT_SECRET, {expiresIn: "1h"});
+    res.json({token});
+});
 app.post('/addProject', async (req, res) => {
     const {
         name,
