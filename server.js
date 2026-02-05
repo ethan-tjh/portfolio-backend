@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require("jsonwebtoken");
+const bcrypt = require('bcrypt');
 const port = process.env.PORT || 3000;
 const dbConfig = {
     host: process.env.DB_HOST,
@@ -31,7 +32,6 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
 }));
-const ADMIN = {id: 1, username: "admin", password: "admin123"};
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 function requireAuth(req, res, next) {
     const header = req.headers.authorization;
@@ -60,12 +60,28 @@ app.get('/projects', async (req, res) => {
     }
 });
 // POST
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const {username, password} = req.body;
-    if (username !== ADMIN.username || password !== ADMIN.password)
-        return res.status(401).json({error: "Invalid credentials"});
-    const token = jwt.sign({userId: ADMIN.id}, JWT_SECRET, {expiresIn: "1h"});
-    res.json({token});
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute(
+            'SELECT * FROM defaultdb.admin WHERE username = ?', 
+            [username]
+        );
+        if (rows.length === 0) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+        const admin = rows[0];
+        const valid = await bcrypt.compare(password, admin.password_hash);
+        if (!valid) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+        const token = jwt.sign({ userId: admin.id }, JWT_SECRET, { expiresIn: "1h" });
+        res.json({ token });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server error" });
+    }
 });
 app.post('/addProject', async (req, res) => {
     const {
