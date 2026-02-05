@@ -59,6 +59,24 @@ app.get('/projects', async (req, res) => {
         res.status(500).json({message: 'Server error for Projects'});
     }
 });
+app.get('/projects/:id/images', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [images] = await connection.execute(
+      `SELECT id, image_url, sort_order, caption
+       FROM defaultdb.portfolio_images
+       WHERE portfolio_id = ?
+       ORDER BY sort_order, id`,
+      [id]
+    );
+    await connection.end();
+    res.json(images);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error retrieving project images' });
+  }
+});
 // POST
 app.post('/login', async (req, res) => {
     const {username, password} = req.body;
