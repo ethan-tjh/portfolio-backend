@@ -25,7 +25,7 @@ const allowedOrigins = [
     "http://localhost:3000/",
     "http://localhost:5000",
     "http://localhost:5000/",
-    "https://ethantjh-portfolio.vercel.app/",
+    "https://ethantjh-portfolio.vercel.app",
 ]
 app.use(cors({
     origin: function (origin, callback) {
