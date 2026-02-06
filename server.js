@@ -30,6 +30,7 @@ app.use(cors({
         if (allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
+        console.log('Blocked origin:', origin); // For Debugging
         return callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
