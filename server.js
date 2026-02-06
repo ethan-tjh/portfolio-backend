@@ -187,17 +187,12 @@ app.get('/skills', async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [rows] = await connection.execute(
-      `SELECT category, id, name
+      `SELECT id, name, skill_category
        FROM defaultdb.tags
-       ORDER BY category, name`
+       ORDER BY skill_category, name`
     );
     await connection.end();
-    const grouped = rows.reduce((acc, r) => {
-      if (!acc[r.category]) acc[r.category] = [];
-      acc[r.category].push({ id: r.id, name: r.name });
-      return acc;
-    }, {});
-    res.json(grouped);
+    res.json(rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error retrieving skills' });
@@ -237,14 +232,30 @@ app.post('/addProject', async (req, res) => {
         img = '',
         category = '',
         github_link = '',
-        demo_link = ''
+        demo_link = '',
+        additional_images: [],
     } = req.body;
     if (!name) {
         return res.status(400).json({message: 'Project name is required'});
     }
     try {
         let connection = await mysql.createConnection(dbConfig);
-        await connection.execute('INSERT INTO portfolio (name, module_code, module_name, description, img, category, github_link, demo_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [name, module_code, module_name, description, img || null, category || null, github_link || null, demo_link || null]);
+        // Insert project
+        const [result] = await connection.execute(
+            'INSERT INTO portfolio (name, module_code, module_name, description, img, category, github_link, demo_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+            [name, module_code, module_name, description, img || null, category || null, github_link || null, demo_link || null]
+        );
+        const projectId = result.insertId;
+        // Insert additional images if provided
+        if (additional_images && additional_images.length > 0) {
+            for (let i = 0; i < additional_images.length; i++) {
+                await connection.execute(
+                    'INSERT INTO portfolio_images (portfolio_id, image_url, sort_order) VALUES (?, ?, ?)',
+                    [projectId, additional_images[i], i + 1]
+                );
+            }
+        }
+        await connection.end();
         res.status(201).json({message: name + ' has been added successfully'});
     } catch (err) {
         console.error(err);
@@ -253,7 +264,7 @@ app.post('/addProject', async (req, res) => {
 });
 app.put('/updateProject/:id', async (req, res) => {
     const {id} = req.params;
-    const {name, module_code, module_name, description, img, category, github_link, demo_link} = req.body;
+    const {name, module_code, module_name, description, img, category, github_link, demo_link, additional_images} = req.body;
     if (!id) {
         return res.status(400).json({message: 'Id must be provided'});
     }
@@ -291,19 +302,36 @@ app.put('/updateProject/:id', async (req, res) => {
         updates.push('demo_link = ?');
         values.push(demo_link || null);
     }
-    if (updates.length===0) {
+    if (updates.length===0 && !additional_images) {
         return res.status(400).json({message: 'No updates were found'});
     }
     try {
         let connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT name FROM portfolio WHERE id = ?', [id]);
-        if (rows.length === 0) {
-            return res.status(404).json({message: 'Project not found'});
+        if (updates.length > 0) {
+            const [rows] = await connection.execute('SELECT name FROM portfolio WHERE id = ?', [id]);
+            if (rows.length === 0) {
+                await connection.end();
+                return res.status(404).json({message: 'Project not found'});
+            }
+            const displayName = name || rows[0].name;
+            values.push(id);
+            const sql = `UPDATE portfolio SET ${updates.join(', ')} WHERE id = ?`;
+            await connection.execute(sql, values);
         }
-        const displayName = name || rows[0].name;
-        values.push(id);
-        const sql = `UPDATE portfolio SET ${updates.join(', ')} WHERE id = ?`;
-        await connection.execute(sql, values);
+        if (additional_images !== undefined) {
+            // Delete existing images for this project
+            await connection.execute('DELETE FROM defaultdb.portfolio_images WHERE portfolio_id = ?', [id]);
+            // Insert new images if any
+            if (additional_images.length > 0) {
+                for (let i = 0; i < additional_images.length; i++) {
+                    await connection.execute(
+                        'INSERT INTO defaultdb.portfolio_images (portfolio_id, image_url, sort_order) VALUES (?, ?, ?)',
+                        [id, additional_images[i], i + 1]
+                    );
+                }
+            }
+        }
+        await connection.end();
         res.status(200).json({message: displayName + ' was updated successfully'});
     } catch (err) {
         console.error(err);
