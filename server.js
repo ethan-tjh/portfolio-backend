@@ -94,9 +94,12 @@ app.get('/projects', async (req, res) => {
 app.get('/categories', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT DISTINCT category FROM defaultdb.portfolio WHERE category IS NOT NULL AND category != "" ORDER BY category');
+        const [rows] = await connection.execute('SELECT DISTINCT category FROM defaultdb.portfolio ORDER BY category');
         await connection.end();
-        res.json(rows.map(row => row.category));
+        const categories = rows
+            .map(row => row.category)
+            .filter(cat => cat !== null && cat !== undefined && cat.trim() !== '');
+        res.json(categories);
     } catch (err) {
         console.error(err);
         res.status(500).json({message: 'Server error for Categories'});
