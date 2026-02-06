@@ -91,6 +91,17 @@ app.get('/projects', async (req, res) => {
         res.status(500).json({message: 'Server error for Projects'});
     }
 });
+app.get('/categories', async (req, res) => {
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute('SELECT DISTINCT category FROM defaultdb.portfolio WHERE category IS NOT NULL AND category != "" ORDER BY category');
+        await connection.end();
+        res.json(rows.map(row => row.category));
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({message: 'Server error for Categories'});
+    }
+});
 app.get('/projects/:id/images', async (req, res) => {
   const { id } = req.params;
   try {
@@ -230,7 +241,7 @@ app.post('/addProject', async (req, res) => {
     }
     try {
         let connection = await mysql.createConnection(dbConfig);
-        await connection.execute('INSERT INTO portfolio (name, module_code, module_name, description, img, category, github_link, demo_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [name, module_code, module_name, description, img, category, github_link, demo_link]);
+        await connection.execute('INSERT INTO portfolio (name, module_code, module_name, description, img, category, github_link, demo_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [name, module_code, module_name, description, img || null, category || null, github_link || null, demo_link || null]);
         res.status(201).json({message: name + ' has been added successfully'});
     } catch (err) {
         console.error(err);
@@ -263,19 +274,19 @@ app.put('/updateProject/:id', async (req, res) => {
     }
     if (img!==undefined) {
         updates.push('img = ?');
-        values.push(img);
+        values.push(img || null);
     }
     if (category!==undefined) {
         updates.push('category = ?');
-        values.push(category);
+        values.push(category || null);
     }
     if (github_link!==undefined) {
         updates.push('github_link = ?');
-        values.push(github_link);
+        values.push(github_link || null);
     }
     if (demo_link!==undefined) {
         updates.push('demo_link = ?');
-        values.push(demo_link);
+        values.push(demo_link || null);
     }
     if (updates.length===0) {
         return res.status(400).json({message: 'No updates were found'});
