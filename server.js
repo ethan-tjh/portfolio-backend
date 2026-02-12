@@ -353,14 +353,21 @@ app.delete('/deleteProject/:id', async (req, res) => {
     }
 });
 app.post("/api/contact", async (req, res) => {
+  console.log("POST /api/contact hit");
+
   const { name, email, subject, message } = req.body;
 
   if (!name || !email || !subject || !message) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
+  if (!process.env.WEB3FORMS_KEY) {
+    console.error("WEB3FORMS_KEY missing in environment");
+    return res.status(500).json({ error: "Server misconfigured (WEB3FORMS_KEY missing)" });
+  }
+
   try {
-    const response = await fetch("https://api.web3forms.com/submit", {
+    const r = await fetch("https://api.web3forms.com/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -373,14 +380,23 @@ app.post("/api/contact", async (req, res) => {
       }),
     });
 
-    const data = await response.json();
+    const data = await r.json().catch(() => null);
 
-    if (!data.success) {
-      return res.status(500).json({ error: data.message || "Failed to send." });
+    console.log("Web3Forms HTTP:", r.status);
+    console.log("Web3Forms body:", data);
+
+    if (!r.ok || !data?.success) {
+      return res.status(500).json({
+        error: data?.message || `Web3Forms failed (HTTP ${r.status})`,
+      });
     }
 
     return res.status(200).json({ success: true, message: "Sent!" });
   } catch (err) {
-    return res.status(500).json({ error: "Failed to send. Try again later." });
+    console.error("Contact route error:", err);
+    return res.status(500).json({
+      error: "Failed to send. Try again later.",
+      details: err.message, // TEMP: remove after debugging
+    });
   }
 });
