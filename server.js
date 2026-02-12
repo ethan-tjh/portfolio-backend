@@ -175,6 +175,22 @@ app.get('/skills', async (req, res) => {
     res.status(500).json({ message: 'Server error retrieving skills' });
   }
 });
+// GET certificates
+app.get('/certificates', async (req, res) => {
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [rows] = await connection.execute(
+      `SELECT id, name, issuer, issue_date, certificate_url, description
+       FROM defaultdb.certificates
+       ORDER BY issue_date DESC`
+    );
+    await connection.end();
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error retrieving certificates' });
+  }
+});
 
 // POST
 app.post('/login', async (req, res) => {
