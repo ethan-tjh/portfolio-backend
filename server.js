@@ -54,28 +54,6 @@ function requireAuth(req, res, next) {
     }
 }
 
-// Email transporter configuration
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT || 587,
-    secure: false,
-    family: 4,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-
-// Verify email transporter on startup
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('Email transporter error:', error);
-    } else {
-        console.log('Email server is ready to send messages');
-    }
-});
-
 app.listen(port, () => {
     console.log('Server running on port', port);
 });
