@@ -352,98 +352,35 @@ app.delete('/deleteProject/:id', async (req, res) => {
         res.status(500).json({message: 'Server error - could not delete Project'});
     }
 });
-app.post('/api/contact', async (req, res) => {
-    const { name, email, subject, message } = req.body;
-    // Validate required fields
-    if (!name || !email || !subject || !message) {
-        return res.status(400).json({ error: 'All fields are required' });
+app.post("/api/contact", async (req, res) => {
+  const { name, email, subject, message } = req.body;
+
+  if (!name || !email || !subject || !message) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  try {
+    const response = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        access_key: process.env.WEB3FORMS_KEY,
+        name,
+        email,
+        subject,
+        message,
+        from_name: "Ethan Tan's Portfolio",
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      return res.status(500).json({ error: data.message || "Failed to send." });
     }
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: 'Please provide a valid email address' });
-    }
-    try {
-        // Email to you (site owner)
-        const mailToOwner = {
-            from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
-            to: process.env.EMAIL_RECEIVER || process.env.EMAIL_USER,
-            replyTo: email,
-            subject: `Portfolio Contact: ${subject}`,
-            html: `
-                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <div style="background: linear-gradient(135deg, #F2A2C0, #4CB3FF); padding: 30px; border-radius: 12px 12px 0 0;">
-                        <h1 style="color: #1E2333; margin: 0; font-size: 24px;">New Contact Form Submission</h1>
-                    </div>
-                    <div style="background-color: #F6F7FB; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e0e0e0; border-top: none;">
-                        <div style="margin-bottom: 20px;">
-                            <p style="color: #66708A; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">From</p>
-                            <p style="color: #1E2333; margin: 0; font-size: 16px; font-weight: 500;">${name}</p>
-                        </div>
-                        <div style="margin-bottom: 20px;">
-                            <p style="color: #66708A; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Email</p>
-                            <p style="color: #1E2333; margin: 0; font-size: 16px;"><a href="mailto:${email}" style="color: #4CB3FF;">${email}</a></p>
-                        </div>
-                        <div style="margin-bottom: 20px;">
-                            <p style="color: #66708A; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Subject</p>
-                            <p style="color: #1E2333; margin: 0; font-size: 16px; font-weight: 500;">${subject}</p>
-                        </div>
-                        <div style="margin-bottom: 0;">
-                            <p style="color: #66708A; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Message</p>
-                            <div style="background-color: #FFFFFF; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">
-                                <p style="color: #3B4256; margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${message}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `
-        };
-        // Confirmation email to sender
-        const mailToSender = {
-            from: `"Ethan Tan" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: `Thanks for reaching out, ${name}!`,
-            html: `
-                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <div style="background: linear-gradient(135deg, #F2A2C0, #4CB3FF); padding: 30px; border-radius: 12px 12px 0 0;">
-                        <h1 style="color: #1E2333; margin: 0; font-size: 24px;">Message Received! ✨</h1>
-                    </div>
-                    <div style="background-color: #F6F7FB; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e0e0e0; border-top: none;">
-                        <p style="color: #3B4256; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                            Hi ${name},
-                        </p>
-                        <p style="color: #3B4256; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                            Thank you for getting in touch! I've received your message and will get back to you as soon as possible.
-                        </p>
-                        <p style="color: #3B4256; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                            In the meantime, feel free to check out my latest work on my portfolio.
-                        </p>
-                        <div style="background-color: #FFFFFF; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 20px;">
-                            <p style="color: #66708A; margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Your message:</p>
-                            <p style="color: #3B4256; margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap;">${message}</p>
-                        </div>
-                        <p style="color: #3B4256; font-size: 16px; line-height: 1.6; margin: 0;">
-                            Best regards,<br>
-                            <strong>Your Name</strong>
-                        </p>
-                    </div>
-                </div>
-            `
-        };
-        // Send email to owner
-        await transporter.sendMail(mailToOwner);
-        // Send confirmation to sender
-        await transporter.sendMail(mailToSender);
-        res.status(200).json({ 
-            success: true, 
-            message: 'Email sent successfully' 
-        });
-    } catch (error) {
-        console.error("Error sending email:", error);
-        return res.status(500).json({
-            error: "Failed to send email.",
-            details: error.message,
-            code: error.code,
-        });
-        }
+
+    return res.status(200).json({ success: true, message: "Sent!" });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to send. Try again later." });
+  }
 });
