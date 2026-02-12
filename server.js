@@ -4,7 +4,6 @@ const cors = require('cors');
 require('dotenv').config();
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcrypt');
-const nodemailer = require('nodemailer');
 
 const port = process.env.PORT || 3000;
 const dbConfig = {
@@ -22,9 +21,7 @@ const app = express();
 app.use(express.json());
 const allowedOrigins = [
     "http://localhost:3000",
-    "http://localhost:3000/",
     "http://localhost:5000",
-    "http://localhost:5000/",
     "https://ethantjh-portfolio.vercel.app",
 ]
 app.use(cors({
@@ -56,6 +53,7 @@ function requireAuth(req, res, next) {
 
 app.listen(port, () => {
     console.log('Server running on port', port);
+    console.log("Node version:", process.version);
 });
 
 // GET
@@ -212,7 +210,7 @@ app.post('/addProject', async (req, res) => {
         category = '',
         github_link = '',
         demo_link = '',
-        additional_images: [],
+        additional_images = [],
     } = req.body;
     if (!name) {
         return res.status(400).json({message: 'Project name is required'});
@@ -355,18 +353,19 @@ app.post("/api/contact", async (req, res) => {
         subject,
         message,
         from_name: "Ethan Tan's Portfolio",
+        replyto: email,
       }),
     });
 
-    const data = await r.json().catch(() => null);
-
+    const raw = await r.text();
     console.log("Web3Forms HTTP:", r.status);
-    console.log("Web3Forms body:", data);
+    console.log("Web3Forms raw:", raw);
+
+    let data = null;
+    try { data = JSON.parse(raw); } catch {}
 
     if (!r.ok || !data?.success) {
-      return res.status(500).json({
-        error: data?.message || `Web3Forms failed (HTTP ${r.status})`,
-      });
+    return res.status(500).json({ error: data?.message || raw || `HTTP ${r.status}` });
     }
 
     return res.status(200).json({ success: true, message: "Sent!" });
